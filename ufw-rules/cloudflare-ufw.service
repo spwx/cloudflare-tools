@@ -1,0 +1,7 @@
+[Unit]
+Description=Update UFW with Cloudflare IPs
+Documentation=https://github.com/cloudflare-tools
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloudflare-ufw.sh

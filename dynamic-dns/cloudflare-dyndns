@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+
+import requests
+import ipaddress
+
+################################ EDIT THIS ###################################
+
+# The zone that contains the records to be updated
+zone = "wall.ninja"
+
+# Your Cloudflare login name
+login = "sean@wall.ninja"
+
+# Your Cloudflare Global API Key
+#
+# You can find your cloudflare Global API Key at the bottom of the "My Profile"
+# page
+global_api_key = "f6ba07233659dfd7acfeab4ec3bc0c69be518"
+
+# the records to update
+records_to_update = ["wall.ninja", "www.wall.ninja"]
+
+##############################################################################
+
+
+def get_current_ip():
+    """
+    gets the current IP from  https://icanhazip.com
+
+    returns the IP address with a type of:
+    ipaddress.IPv4Address or ipaddress.IPv6Address
+    """
+    request = requests.get("https://icanhazip.com")
+    current_ip = request.text.strip()
+    return ipaddress.ip_address(current_ip)
+
+
+def get_zone_id(zone):
+    url = f"{cloudflare_api_url}zones?name={zone}"
+    headers = {
+        "X-Auth-Email": login,
+        "X-Auth-Key": global_api_key,
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, headers=headers)
+    return response.json()["result"][0]["id"]
+
+
+def get_record(record):
+    url = f"{cloudflare_api_url}zones/{zone_id}/dns_records?name={record}"
+    headers = {
+        "X-Auth-Email": login,
+        "X-Auth-Key": global_api_key,
+        "Content-Type": "application/json",
+    }
+    response = requests.get(url, headers=headers)
+    record_ip = response.json()["result"][0]["content"]
+    record_id = response.json()["result"][0]["id"]
+    return record_ip, record_id
+
+
+def update_record(record):
+    # check if address is v4 or v6
+    if isinstance(current_ip, ipaddress.IPv4Address):
+        record_type = "A"
+    else:
+        record_type = "AAAA"
+    url = f"{cloudflare_api_url}zones/{zone_id}/dns_records/{record_id}"
+    headers = {
+        "X-Auth-Email": login,
+        "X-Auth-Key": global_api_key,
+        "Content-Type": "application/json",
+    }
+    data = {"type": record_type, "name": record, "content": current_ip.exploded}
+    response = requests.put(url, headers=headers, json=data)
+    if response.json()["success"] == True:
+        print(f"'{record}' updated to: {current_ip.exploded}")
+    else:
+        print("Received the following errors from Cloudflare")
+        for error in response.json()["errors"]:
+            print(error)
+
+
+cloudflare_api_url = "https://api.cloudflare.com/client/v4/"
+
+# get the current ip
+current_ip = get_current_ip()
+
+# get the zone identifier
+zone_id = get_zone_id(zone)
+
+# check each record
+for record in records_to_update:
+
+    # get the IP address in the record, and the record's identifier
+    record_ip, record_id = get_record(record)
+
+    # compare current ip with the IP in the cloudflare record
+    if current_ip.exploded == record_ip:
+        print(f"'{record}' already up to date")
+    else:
+        update_record(record)

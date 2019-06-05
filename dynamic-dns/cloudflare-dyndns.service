@@ -1,0 +1,7 @@
+[Unit]
+Description=Update Cloudflare DNS records
+Documentation=https://github.com/cloudflare-dyndns
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloudflare-dyndns
